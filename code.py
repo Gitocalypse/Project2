@@ -5,6 +5,7 @@ import matplotlib.image as mpimg
 import glob
 import os
 import re
+import shutil
 #%matplotlib qt
 
 
@@ -36,8 +37,8 @@ def camera_cal(images, nx, ny):
 
             # Draw and display the corners
             img = cv2.drawChessboardCorners(img, (nx,ny), corners, ret)
-            cv2.imshow('img',img)
-            cv2.waitKey(500)
+            #cv2.imshow('img',img)
+            #cv2.waitKey(500)
 
     cv2.destroyAllWindows()
     image_shape = gray.shape[::-1]
@@ -77,12 +78,16 @@ outputpath = "output_images/"
 pattern = re.compile("^.+processed.jpg$")
 fileExtension = '.jpg'
 files = os.listdir(filepath)
+#shutil.copy(files, './output_images/')
 for file in files:
     if file.endswith(fileExtension): #somehow i had a none jpg file in the folder after severall iterations
         # import the image if it is not a saved output
         if not pattern.match(file):
             image_filepath = filepath + file
+            image_output = outputpath + file
             image_raw = mpimg.imread(image_filepath)
+
+            #print(mtx, dist, '\n')
 
             # process image
             un_dist = undistort_image(image_raw, mtx, dist)
@@ -98,11 +103,24 @@ for file in files:
             plt.imshow(un_dist)
 
             # writeout the image with "-processed" in the name so it will not be reprocessed.
-            #plt.savefig(image_filepath.replace(".jpg","-processed.jpg"))
-            #plt.savefig(outputpath.replace(".jpg","-processed.jpg"))
-            #plt.savefig()
-            plt.savefig("output_images/" + 'final_' + file)
+            #plt.savefig("output_images/" + 'undistort_' + file)
+            #cv2.imwrite(os.path.join(image_filepath.replace(".jpg","-undistort.jpg"), un_dist))
+            #cv2.imwrite(os.path.join(image_output.replace(".jpg","-undistort.jpg"), un_dist))
+
+
+            un_dist_BGR = cv2.cvtColor(un_dist, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(image_output.replace(".jpg","-undistort.jpg"), un_dist_BGR)
+            #cv2.imwrite('/output_images/filename.jpg', un_dist)
+
+            #un_dist = un_dist.save(image_output.replace(".jpg","-undistort.jpg")
+            #un_dist = un_dist.save('/output_images/filename.jpg')
+
+            #cv2.imwrite(outputpath +  un_dist)
             #cv2.imwrite(os.path.join(outputpath + file.name, un_dist))
             #cv2.imwrite(os.path.join('output_images/final{}.jpg',un_dist))
             #cv2.imwrite(os.path.join("output_images/" + str(file) + '.jpg', un_dist))
             #cv2.imwrite(os.path.join("output_images/" + file + 'final.jpg', un_dist))
+
+
+#--------------------------------------------------------
+# Rubric 3: Use color transforms, gradients, etc., to create a thresholded binary image.
