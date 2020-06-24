@@ -5,9 +5,6 @@ import matplotlib.image as mpimg
 import glob
 import os
 import re
-#import shutil
-#from matplotlib.pyplot import figure
-#%matplotlib qt
 
 #------------------------------------------------------
 #Define a function that can calculate the calibration parameter and retunr them
@@ -21,7 +18,6 @@ def camera_cal(images, nx, ny):
     objpoints = [] # 3d points in real world space
     imgpoints = [] # 2d points in image plane.
 
-
     # Step through the list and search for chessboard corners
     for fname in images:
         img = cv2.imread(fname)
@@ -29,7 +25,7 @@ def camera_cal(images, nx, ny):
 
         # Find the chessboard corners
         ret, corners = cv2.findChessboardCorners(gray, (nx,ny),None)
-        print(corners)
+        #print(corners)
 
         # If found, add object points, image points
         if ret == True:
@@ -38,10 +34,7 @@ def camera_cal(images, nx, ny):
 
             # Draw and display the corners
             img = cv2.drawChessboardCorners(img, (nx,ny), corners, ret)
-            #cv2.imshow('img',img)
-            #cv2.waitKey(500)
 
-    cv2.destroyAllWindows()
     image_shape = gray.shape[::-1]
 
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, image_shape, None, None)
@@ -113,33 +106,16 @@ def region_of_interest(img, vertices):
 #Define Function for perspective transforms
 def perspective_transform(img):
 
-
-    #cv2.imshow('region of interewt',img)
-    #cv2.waitKey(2000)
-
     imshape = img.shape
-    #vertices = np.array([[(60,imshape[0]),(imshape[1]//2-100, 420), (imshape[1]//2+100, 420), (imshape[1]-60,imshape[0])]], dtype=np.int32)
     vertices = np.array([[(60,imshape[0]),(imshape[1]//2-90, 450), (imshape[1]//2+90, 450), (imshape[1]-60,imshape[0])]], dtype=np.int32)
 
     masked = region_of_interest(img, vertices)
-    #cv2.imshow('region of interewt',masked)
-    #cv2.waitKey(2000)
-
 
     img_size = (img.shape[1], img.shape[0])
-    #src = np.float32([[700,450], [1100,img_size[0]], [200,img_size[0]], [500,450]])
-    #dst = np.float32([[900,0], [900,img_size[0]], [350,img_size[0]], [350,0]])
-
-    #src = np.float32([[0, 673], [1207, 673], [0, 450], [1280, 450]])
-    #dst = np.float32([[569, 223], [711, 223], [0, 0], [1280, 0]])
-
-    #src = np.float32([[120, 720], [550, 470], [700, 470], [1160, 720]])
-    #dst = np.float32([[200,720], [200,0], [1080,0], [1080,720]])
 
     src = np.float32([[585, 455], [705, 455], [1130, 720], [190, 720]])
     offset = 200
     dst = np.float32([[offset, 0], [img_size[0]-offset, 0], [img_size[0]-offset, img_size[1]], [offset, img_size[1]]])
-
 
     M = cv2.getPerspectiveTransform(src, dst)
     Minv = cv2.getPerspectiveTransform(dst, src)
@@ -147,9 +123,9 @@ def perspective_transform(img):
 
     return warped, Minv, img_size
 
+
 #-------------------------------------------------
 #Define Function for Lane Line Detection Sliding Sliding Windows
-
 def lane_finding(img): #, nwindows, margin, minipix):
 
     # HYPERPARAMETERS
@@ -295,9 +271,7 @@ def measure_curvature_real(ploty, left_fit_cr, right_fit_cr, image_mid):
 
 
 #######################################################
-
-
-#################################################
+#######################################################
 
 ##############################
 #NanoDegree Project 2 - Rubric
@@ -324,17 +298,12 @@ files = os.listdir(filepath)
 for file in files:
     if file.endswith(fileExtension): #somehow i had a none jpg file in the folder after severall iterations
         # import the image if it is not a saved output
-    #    if not pattern.match(file):
         image_filepath = filepath + file
         image_output = outputpath + file
         image_raw = mpimg.imread(image_filepath)
 
         # process image
         un_dist = undistort_image(image_raw, mtx, dist)
-        # next images
-        #plt.figure()
-        # plot the image
-        #plt.imshow(un_dist)
         un_dist_BGR = cv2.cvtColor(un_dist, cv2.COLOR_RGB2BGR)
         cv2.imwrite(image_output.replace(".jpg","-undistort.jpg"), un_dist_BGR)
 
@@ -364,7 +333,6 @@ for file in files:
 
             # process image
             process_Channel = chanel_function(image_3, s_thresh, l_thresh, sx_thresh, sy_thresh, red_tresh, sobel_kernel)
-
             #cv2.imshow('processed',process_Channel)
             #cv2.waitKey(5000)
             #cv2.destroyAllWindows()
@@ -398,12 +366,6 @@ for file in files:
             #cv2.waitKey(500)
             #cv2.destroyAllWindows()
 
-            # next image
-            #plt.figure()
-
-            # plot the image
-            #plt.imshow(un_dist)
-
             #un_dist_BGR = cv2.cvtColor(un_dist, cv2.COLOR_RGB2BGR)
             cv2.imwrite(image_output_4.replace("-Rubric3.jpg","-Rubric4.jpg"), process_transform)
 
@@ -435,8 +397,6 @@ for file in files:
             image_mid = image_5.shape[1]/2.0
             left_curverad, right_curverad, veh_pos_offset = measure_curvature_real(ploty, left_fit, right_fit, image_mid)
             curve_list.append([file, left_curverad, right_curverad, veh_pos_offset])
-
-
             #print(left_curverad, 'm', right_curverad, 'm', veh_pos_offset, 'm')
 
             #Rubric 7: Warp the detected lane boundaries back onto the original image.
@@ -447,8 +407,6 @@ for file in files:
             color_empty = np.dstack((empty_warp, empty_warp, empty_warp))
 
             #transform the curvature into cv2 format
-            #print(left_pos, 'left pos', y_eval, 'yeval')
-
             pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
             pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
             lanes_pts = np.hstack((pts_left, pts_right))
@@ -464,8 +422,7 @@ for file in files:
             #cv2.waitKey(500)
             #cv2.destroyAllWindows()
 
-print(curve_list)
-print(len(curve_list))
+
 
 #Rubric 8: Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 filepath = "test_images/"
@@ -510,7 +467,7 @@ for file in files:
 
                     for i in range(len(curve_list)):
                         if curve_list[i][0].startswith(file_orginal): #'file_orginal'+ 'Rubric4.jpg':
-                            print(curve_list[i][0])
+                            #print(curve_list[i][0])
                             curvature_average = (curve_list[i][1] + curve_list[i][2])/2
                             font = cv2.FONT_HERSHEY_SIMPLEX
                             text1 = "Radius of Curvature: {} m".format(int(curvature_average))
