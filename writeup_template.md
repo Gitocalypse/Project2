@@ -104,6 +104,9 @@ To get smoother lines I average in the end over the last couple of frames. After
 
 After all addjustment the lines are found in sufficiant quality in the test_video.
 
+The processed video can be found under:
+white.mp4
+
 ![alt-text-1](white.mp4)
 
 ### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
