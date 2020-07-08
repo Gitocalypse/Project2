@@ -29,6 +29,83 @@ The goals / steps of this project are the following:
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
+### Suggestions after first commit:
+- Applying color threshold to the B(range:145-200 in LAB for shading & brightness changes and R in RGB in final pipeline can also help in detecting the yellow lanes.
+  - And thresholding L (range: 215-255) of Luv for whites.
+  - If perspective transform captures a very wide region of interest then it can bring noise. For single lane taking little wider region of interest will led in lesser noise in the warped binary images. Please don't shift the lane horizontally after using the perspective transform because this way your camera position get disturb from the center image and you can get an issues in calculating vehicle offset from center. Also you can check this link for more information:
+      https://www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/
+      http://www.ijser.org/researchpaper%5CA-Simple-Birds-Eye-View-Transformation-Technique.pdf
+  - Check both the polynomials are correctly distanced with respect to the width of a lane.
+  - Check the curvature of both polynomials whether it is similiar or not.
+  - Also check the binary thresholding for improvement because mostly the detection is failing in shadows and brighter lane.
+  - Also if there is an issue in a single frame then you can reject that wrong detection and reuse the confident detection from the previous detection. For smoothening the lane lines and for reducing wrong detection you can try averaging lane detection using a series of multiple frames.
+  - In addition to other filtering mechanisms. You can also use cv2.matchShapes as a means to make sure the final warp polygon is of good quality. This can be done by comparing two shapes returning 0 index for identical shapes. You can use this to make sure that the polygon of your next frame is closer to what is expected and if not then can use the old polygon instead. This way you are faking it until a new frames appear and hence will get good results.
+
+
+### How i reworked after fist commit
+I thougt video was optional, therefore i didnt check my pipline for video for the first commit. After learning video was necessary to pass, i complete reworked my pipline. The first commit is not optimized for video. I left the first pipline as is, as it did work well for the images. The code can be found under "code.py"
+
+The new pipline is saved under "code_video.py".
+
+First step for rewriting the pipline is to get rid of all the foor loops I created to deal with all the individual rubric individually.
+Now the pipline starts with the function "process_image" (line #411). From there I call all the other functions to analyse the image.
+
+I reworked the "chanel_function" (line #90) so that it includes thresholding for Luv, Green and Sobel-Direction. The red treshhold was changed to a color threshold.
+
+For the image transform i used different variables, aswell as for the region of interest funciton. The old variables are commented out.
+
+Antoher significant change was to not always use the sliding window funciton but rather seach arround the already found polynomial (similar as it was shown in the course material). The function is called "search_around_poly" (line #260)
+
+The "fit_polynomial" (line #316) function now checks for frame count and if there is an already existing polynomial. If the "search_around_poly" function returns empty values the sliding windows method is used again
+
+```python
+    if frame_count  == 0: #for the first frame always use sliding window
+        leftx, lefty, rightx, righty, out_img = lane_finding(img)
+        left_fit = np.polyfit(lefty, leftx, 2)
+        right_fit = np.polyfit(righty, rightx, 2)
+    elif frame_count != 0:
+        leftx, lefty, rightx, righty, out_img = search_around_poly(img, left_fit, right_fit)
+        left_fit = np.polyfit(lefty, leftx, 2)
+        right_fit = np.polyfit(righty, rightx,  2)
+        if left_fit == [] or right_fit == []: #if the method of search arround the polynomial doenst work use sliding window
+            leftx, lefty, rightx, righty, out_img = lane_finding(img)
+            left_fit = np.polyfit(lefty, leftx, 2)
+            right_fit = np.polyfit(righty, rightx, 2)
+```
+
+To check the quality of the found polynomials and decide what method to use to find the polynomials multiple global variables are created, such as "frame_count".
+
+To work in the suggestion from the Reviewer I check the found curves for similarty and for there distance. If either one of them is no sufficiant enough i discard the found curve and use the one from the frame before called "old_left_fit/old_right_fit".
+```python
+      # Check quality of the found curves
+      # Check for similiarty
+      similarty_check = cv2.matchShapes(left_fit, right_fit, 1,0.0)
+      #print(similarty_check, 'similatty check')
+
+      #check for distance between the linces
+      line_distance = np.mean(right_fitx - left_fitx )
+      #print(line_distance, 'line distance')
+
+      #using old line, if quality isnt goot enough
+      if frame_count != 0:
+          #if line_distance > 620:
+          if similarty_check > 0.2 or line_distance < 575 or line_distance > 625:
+              left_fit = old_left_fit
+              right_fit = old_right_fit
+              #print('pingg alte linie')
+```
+
+To get smoother lines I average in the end over the last couple of frames. After checking different settings, i know average over 13 last frames.
+```python
+      #smoothing the line by avering ofer the last couple of frames
+      right_average_range_x, right_fitx = averaging_lines(right_average_range_x, right_fitx)
+      left_average_range_x, left_fitx = averaging_lines(left_average_range_x, left_fitx)
+```
+
+After all addjustment the lines are found in sufficiant quality in the test_video.
+
+![alt-text-1](white.mp4)
+
 ### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
 
 ---
@@ -49,7 +126,7 @@ The Function to return the values needed to undistort an imagae is called camera
 With the function cv2.findChessboardCorners and cv2. drawChessboardCorners and cv2.calibrateCamera the values are calculated.
 Input is the chessboard image and the number of white and black fields.
 
-
+![alt-text-1](output_images/test2-undistort.jpg)
 
 ### Pipeline (single images)
 
@@ -75,7 +152,7 @@ The values for the input can be adjusted in the pipiline under rubric 3.
 
 The resulting image is a combination of red-threshold, Sobel X threshold and the saturation threshold. The resulting image is saved in the folder output_images with its orginal name and the suffix "-Rubric3.jpg"
 
-output_images/test1-Rubric3.jpg
+![alt-text-1](output_images/test1-Rubric3.jpg)
 
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
@@ -92,7 +169,7 @@ dst = np.float32([[offset, 0], [img_size[0]-offset, 0], [img_size[0]-offset, img
 
 After testing if the transformation was sufficiant enough, the transformed images are saved in the folder output_images with its orginal name and the suffix "-Rubric4.jpg"
 
-output_images/test2-Rubric4.jpg
+![alt-text-1](output_images/test2-Rubric4.jpg)
 
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
@@ -120,9 +197,9 @@ The position of the vehicle is calculated by taking the middle between the curve
 Rubric 7 and 8 are a little bit messy for understanding. In line #399 I save the results of Rubric6 into an array that is used later in Rubric8. This is a deviation from my plan to solve every Rubric in its own for loop.
 
 Rubric7 i am wasn't sure what the result should look like, so I saved two possibilities:
-output_images/test2-Rubric7-alternative.jpg
-output_images/test2-Rubric7.jpg
-output_images/test2-Rubric8.jpg
+![alt-text-1](output_images/test2-Rubric7-alternative.jpg)
+![alt-text-1](output_images/test2-Rubric7.jpg)
+![alt-text-1](output_images/test2-Rubric8.jpg)
 
 
 
